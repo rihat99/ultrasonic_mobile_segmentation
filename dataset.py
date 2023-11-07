@@ -9,6 +9,8 @@ from torchvision import transforms
 from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
 
+import cv2
+
 
 class BUSI(Dataset):
     def __init__(self, root, image_transform, mask_transform, target_transform=None):
@@ -47,8 +49,8 @@ class BUSI(Dataset):
 
     
     def __getitem__(self, index):
-        image = default_loader(self.images[index])
-        mask = default_loader(self.masks[index])
+        image = cv2.imread(self.images[index], cv2.IMREAD_GRAYSCALE)
+        mask = cv2.imread(self.masks[index], cv2.IMREAD_GRAYSCALE)
 
         image = self.image_transform(image)
         mask = self.mask_transform(mask)
@@ -92,8 +94,8 @@ class CT2US(Dataset):
 
     
     def __getitem__(self, index):
-        image = default_loader(self.images[index])
-        mask = default_loader(self.masks[index])
+        image = cv2.imread(self.images[index], cv2.IMREAD_GRAYSCALE)
+        mask = cv2.imread(self.masks[index], cv2.IMREAD_GRAYSCALE)
 
         image = self.image_transform(image)
         mask = self.mask_transform(mask)
