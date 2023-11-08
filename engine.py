@@ -6,7 +6,7 @@ from utils import save_model
 
 def train_step(
         model: torch.nn.Module,
-        train_loader: torch.utils.data.DataLoader,
+        train_loader,
         loss_fn: torch.nn.Module,
         optimizer: torch.optim.Optimizer,
         device: torch.device,
@@ -47,7 +47,7 @@ def train_step(
 
 def val_step(
         model: torch.nn.Module,
-        val_loader: torch.utils.data.DataLoader,
+        val_loader,
         loss_fn: torch.nn.Module,
         device: torch.device,
 ):
@@ -82,13 +82,14 @@ def val_step(
 
 def trainer(
         model: torch.nn.Module,
-        train_loader: torch.utils.data.DataLoader,
-        val_loader: torch.utils.data.DataLoader,
+        train_loader,
+        val_loader,
         loss_fn: torch.nn.Module,
         optimizer: torch.optim.Optimizer,
-        lr_scheduler: torch.optim.lr_scheduler,
+        lr_scheduler,
         device: torch.device,
         epochs: int,
+        save_dir: str,
 ):
     """
     Train and evaluate model.
@@ -114,7 +115,7 @@ def trainer(
         "val_acc": [],
         "learning_rate": [],
     }
-    best_val_acc = 0.0
+    best_val_loss = 1e10
 
     for epoch in range(1, epochs + 1):
         print(f"Epoch {epoch}:")
@@ -132,6 +133,12 @@ def trainer(
         print()
         
         results["val_loss"].append(val_loss)
+
+        if val_loss < best_val_loss:
+            best_val_loss = val_loss
+            save_model(model, save_dir + "/best_model.pth")
+
+        save_model(model, save_dir + "/last_model.pth")
 
 
     return results
