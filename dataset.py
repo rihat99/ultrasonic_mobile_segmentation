@@ -81,8 +81,8 @@ class CT2US(Dataset):
 
     
     def make_dataset(self):
-        images_path = os.path.join(self.root, 'slice', 'slice')
-        masks_path = os.path.join(self.root, 'mask', 'mask')
+        images_path = os.path.join(self.root, 'image')
+        masks_path = os.path.join(self.root, 'mask')
 
         for image_name in sorted(os.listdir(images_path)):
             image_path = os.path.join(images_path, image_name)

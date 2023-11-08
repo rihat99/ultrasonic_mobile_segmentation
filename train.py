@@ -6,10 +6,11 @@ from utils import plot_results
 import torch
 from torch.utils.data import DataLoader
 from torchvision.transforms import v2
+import torchvision
+torchvision.disable_beta_transforms_warning()
 
 import matplotlib.pyplot as plt
 import numpy as np
-from sklearn.model_selection import train_test_split
 import random
 
 import yaml
@@ -54,22 +55,27 @@ def main():
     
 
     #load data
-    transforms = v2.Compose([
+    transforms_train = v2.Compose([
         v2.ToImageTensor(),
         v2.ToDtype(torch.float32),
         v2.RandomHorizontalFlip(p=0.5),
         v2.RandomVerticalFlip(p=0.5),
         v2.RandomRotation(degrees=(0, 15)),
         v2.RandomAffine(degrees=(0, 15), translate=(0.1, 0.1), scale=(0.9, 1.1), shear=(-10, 10, -10, 10)),
-        v2.RandomResizedCrop(128, scale=(0.8, 1.0)),
+        v2.RandomResizedCrop(IMAGE_SIZE, scale=(0.8, 1.0), antialias=True),
     ])
 
-    dataset = CT2US(root="datasets/CT2US", transforms=transforms)
+    transforms_test = v2.Compose([
+        v2.ToImageTensor(),
+        v2.ToDtype(torch.float32),
+        v2.Resize(IMAGE_SIZE, antialias=True),
+    ])
 
-    train_set, test_set = train_test_split(dataset, test_size=0.2, random_state=42)
+    train_dataset = CT2US(root="datasets/CT2US/train", transforms=transforms_train)
+    test_dataset = CT2US(root="datasets/CT2US/test", transforms=transforms_test)
 
-    train_loader = DataLoader(train_set, batch_size=BATCH_SIZE, shuffle=True, num_workers=8)
-    test_loader = DataLoader(test_set, batch_size=BATCH_SIZE, shuffle=False, num_workers=8)
+    train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=8)
+    test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=8)
 
     #load model
     if MODEL == "UNet":
