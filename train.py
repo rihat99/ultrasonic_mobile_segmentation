@@ -5,7 +5,7 @@ from utils import plot_results
 
 import torch
 from torch.utils.data import DataLoader
-from torchvision import transforms
+from torchvision.transforms import v2
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -54,17 +54,17 @@ def main():
     
 
     #load data
-    image_transform = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Resize(IMAGE_SIZE),
-        transforms.Normalize(mean=[0.5], std=[0.5])
-    ])
-    mask_transform = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Resize(IMAGE_SIZE),
+    transforms = v2.Compose([
+        v2.ToImageTensor(),
+        v2.ToDtype(torch.float32),
+        v2.RandomHorizontalFlip(p=0.5),
+        v2.RandomVerticalFlip(p=0.5),
+        v2.RandomRotation(degrees=(0, 15)),
+        v2.RandomAffine(degrees=(0, 15), translate=(0.1, 0.1), scale=(0.9, 1.1), shear=(-10, 10, -10, 10)),
+        v2.RandomResizedCrop(128, scale=(0.8, 1.0)),
     ])
 
-    dataset = CT2US(root="datasets/CT2US", image_transform=image_transform, mask_transform=mask_transform)
+    dataset = CT2US(root="datasets/CT2US", transforms=transforms)
 
     train_set, test_set = train_test_split(dataset, test_size=0.2, random_state=42)
 

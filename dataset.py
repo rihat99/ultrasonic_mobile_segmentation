@@ -10,6 +10,7 @@ from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
 
 import cv2
+import numpy as np
 
 
 class BUSI(Dataset):
@@ -66,7 +67,7 @@ class BUSI(Dataset):
         
 
 class CT2US(Dataset):
-    def __init__(self, root, image_transform, mask_transform):
+    def __init__(self, root, transforms):
         super().__init__()
 
         self.root = root
@@ -76,8 +77,7 @@ class CT2US(Dataset):
 
         self.make_dataset()
 
-        self.image_transform = image_transform
-        self.mask_transform = mask_transform
+        self.transforms = transforms
 
     
     def make_dataset(self):
@@ -94,11 +94,14 @@ class CT2US(Dataset):
 
     
     def __getitem__(self, index):
-        image = cv2.imread(self.images[index], cv2.IMREAD_GRAYSCALE)
-        mask = cv2.imread(self.masks[index], cv2.IMREAD_GRAYSCALE)
+        image = cv2.imread(self.images[index], cv2.IMREAD_GRAYSCALE).astype('float32') / 255
+        mask = cv2.imread(self.masks[index], cv2.IMREAD_GRAYSCALE).astype('float32') / 255
 
-        image = self.image_transform(image)
-        mask = self.mask_transform(mask)
+        # unsqueeze to add a channel dimension
+        image = np.expand_dims(image, axis=2)
+        mask = np.expand_dims(mask, axis=2)
+
+        image, mask = self.transforms(image, mask)
 
         return image, mask
 
