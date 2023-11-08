@@ -9,6 +9,8 @@ from torchvision.transforms import v2
 import torchvision
 torchvision.disable_beta_transforms_warning()
 
+from monai.losses import DiceCELoss
+
 import matplotlib.pyplot as plt
 import numpy as np
 import random
@@ -25,6 +27,8 @@ LEARNING_RATE = float(config["LEARNING_RATE"])
 BATCH_SIZE = int(config["BATCH_SIZE"])
 NUM_EPOCHS = int(config["NUM_EPOCHS"])
 
+LOSS = config["LOSS"]
+
 IMAGE_SIZE = int(config["IMAGE_SIZE"])
 THRESHOLD = float(config["THRESHOLD"])
 MODEL = config["MODEL"]
@@ -39,7 +43,7 @@ def START_seed():
     torch.cuda.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
     np.random.seed(seed)
-    random.seed(seed)
+    random.seed(seed) 
 
 
 def main():
@@ -80,12 +84,22 @@ def main():
     #load model
     if MODEL == "UNet":
         model = UNet(outSize=(IMAGE_SIZE, IMAGE_SIZE)).to(DEVICE)
+    elif MODEL == "SegResNet":
+        from monai.networks.nets import SegResNet
+
+        model = SegResNet(in_channels=1, out_channels=2, spatial_dims=2).to(DEVICE)
     else:
         raise Exception("Model not implemented")
     
     #load optimizer
-    loss = torch.nn.BCEWithLogitsLoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
+    if LOSS == "DiceCELoss":
+        loss = DiceCELoss(to_onehot_y=True, softmax=True, include_background=False)
+    elif LOSS == "BCEWithLogitsLoss":
+        loss = torch.nn.BCEWithLogitsLoss()
+    else:
+        raise Exception("Loss not implemented")
+    
+    optimizer = torch.optim.AdamW(model.parameters(), lr=LEARNING_RATE)
     lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=NUM_EPOCHS)
 
 
@@ -110,9 +124,8 @@ def main():
     with open(save_dir + "/train_summary.json", "w") as f:
         json.dump(train_summary, f, indent=4)
 
-    plot_results(results, save_dir)
-
-
+    plot_results(results["train_loss"], results["val_loss"], "Loss", save_dir)
+    plot_results(results["train_dice"], results["val_dice"], "Dice", save_dir)
 
 
 if __name__ == "__main__":

@@ -1,4 +1,7 @@
 import torch
+from monai.metrics import DiceMetric
+from monai.transforms import Compose, AsDiscrete
+from monai.data import decollate_batch
 
 from tqdm import tqdm
 
@@ -27,6 +30,11 @@ def train_step(
 
     model.train()
     train_loss = 0.0
+    train_dice = 0.0
+
+    post_label = Compose([AsDiscrete(to_onehot=2)])
+    post_pred = Compose([AsDiscrete(argmax=True, to_onehot=2)])
+    dice_acc = DiceMetric(include_background=False, get_not_nans=True)
 
     for batch_idx, (data, target) in enumerate(tqdm(train_loader)):
         data, target = data.to(device), target.to(device)
@@ -38,11 +46,24 @@ def train_step(
         optimizer.step()
 
         train_loss += loss.item()
-        _, predicted = output.max(1)
+
+        # threshold output and target
+        val_labels_list = decollate_batch(target)
+        val_labels_convert = [post_label(val_label_tensor) for val_label_tensor in val_labels_list]
+
+        val_outputs_list = decollate_batch(output)
+        val_output_convert = [post_pred(val_pred_tensor) for val_pred_tensor in val_outputs_list]
+
+        dice_acc(y_pred=val_output_convert, y=val_labels_convert)
+
+        dice = dice_acc.aggregate()[0]
+        
+        train_dice += dice.item()
 
     train_loss /= len(train_loader)
+    train_dice /= len(train_loader)
 
-    return train_loss
+    return train_loss, train_dice
 
 
 def val_step(
@@ -66,6 +87,11 @@ def val_step(
 
     model.eval()
     val_loss = 0.0
+    val_dice = 0.0
+    
+    post_label = Compose([AsDiscrete(to_onehot=2)])
+    post_pred = Compose([AsDiscrete(argmax=True, to_onehot=2)])
+    dice_acc = DiceMetric(include_background=False, get_not_nans=True)
 
     with torch.no_grad():
         for data, target in tqdm(val_loader):
@@ -73,11 +99,24 @@ def val_step(
 
             output = model(data)
             val_loss += loss_fn(output, target).item()
-            _, predicted = output.max(1)
+
+            # threshold output and target
+            val_labels_list = decollate_batch(target)
+            val_labels_convert = [post_label(val_label_tensor) for val_label_tensor in val_labels_list]
+
+            val_outputs_list = decollate_batch(output)
+            val_output_convert = [post_pred(val_pred_tensor) for val_pred_tensor in val_outputs_list]
+
+            dice_acc(y_pred=val_output_convert, y=val_labels_convert)
+
+            dice = dice_acc.aggregate()[0]
+
+            val_dice += dice.item()
 
     val_loss /= len(val_loader)
+    val_dice /= len(val_loader)
 
-    return val_loss
+    return val_loss, val_dice
 
 
 def trainer(
@@ -110,16 +149,16 @@ def trainer(
 
     results = {
         "train_loss": [],
-        "train_acc": [],
+        "train_dice": [],
         "val_loss": [],
-        "val_acc": [],
+        "val_dice": [],
         "learning_rate": [],
     }
     best_val_loss = 1e10
 
     for epoch in range(1, epochs + 1):
         print(f"Epoch {epoch}:")
-        train_loss = train_step(model, train_loader, loss_fn, optimizer,  device)
+        train_loss, train_dice = train_step(model, train_loader, loss_fn, optimizer,  device)
         print(f"Train Loss: {train_loss:.4f}")
         
         print(f"Learning rate: {optimizer.param_groups[0]['lr']:.5f}")
@@ -127,12 +166,14 @@ def trainer(
         lr_scheduler.step()
 
         results["train_loss"].append(train_loss)
+        results["train_dice"].append(train_dice)
 
-        val_loss = val_step(model, val_loader, loss_fn, device)
+        val_loss, val_dice = val_step(model, val_loader, loss_fn, device)
         print(f"val Loss: {val_loss:.4f}")
         print()
         
         results["val_loss"].append(val_loss)
+        results["val_dice"].append(val_dice)
 
         if val_loss < best_val_loss:
             best_val_loss = val_loss
