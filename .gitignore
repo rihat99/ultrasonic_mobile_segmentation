@@ -162,3 +162,4 @@ datasets/BUSI
 datasets/CT2US
 .vscode
 runs/
+model.ptl
