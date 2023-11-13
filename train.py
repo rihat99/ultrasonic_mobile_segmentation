@@ -1,7 +1,7 @@
 from dataset import CT2US
-from models.unet import UNet
 from engine import trainer
 from utils import plot_results
+from models.get_model import get_model
 
 import torch
 from torch.utils.data import DataLoader
@@ -60,7 +60,7 @@ def main():
 
     #load data
     transforms_train = v2.Compose([
-        v2.ToImageTensor(),
+        v2.ToImage(),
         v2.ToDtype(torch.float32),
         v2.RandomHorizontalFlip(p=0.5),
         v2.RandomVerticalFlip(p=0.5),
@@ -70,7 +70,7 @@ def main():
     ])
 
     transforms_test = v2.Compose([
-        v2.ToImageTensor(),
+        v2.ToImage(),
         v2.ToDtype(torch.float32),
         v2.Resize(IMAGE_SIZE, antialias=True),
     ])
@@ -82,14 +82,8 @@ def main():
     test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=8)
 
     #load model
-    if MODEL == "UNet":
-        model = UNet(outSize=(IMAGE_SIZE, IMAGE_SIZE)).to(DEVICE)
-    elif MODEL == "SegResNet":
-        from monai.networks.nets import SegResNet
-
-        model = SegResNet(in_channels=1, out_channels=2, spatial_dims=2).to(DEVICE)
-    else:
-        raise Exception("Model not implemented")
+    model = get_model(MODEL, IMAGE_SIZE)
+    model.to(DEVICE)
     
     #load optimizer
     if LOSS == "DiceCELoss":

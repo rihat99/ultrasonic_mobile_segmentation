@@ -41,6 +41,14 @@ def train_step(
 
         optimizer.zero_grad()
         output = model(data)
+        if model._get_name() == "LRASPP":
+            output = output["out"]
+
+        if model._get_name() == "MobileViTV2ForSemanticSegmentation" or\
+           model._get_name() == "SegformerForSemanticSegmentation":
+            output = output[0]
+            output = torch.nn.functional.interpolate(output, size=(target.shape[2], target.shape[3]), mode='bilinear', align_corners=False)
+
         loss = loss_fn(output, target)
         loss.backward()
         optimizer.step()
@@ -98,6 +106,14 @@ def val_step(
             data, target = data.to(device), target.to(device)
 
             output = model(data)
+            if model._get_name() == "LRASPP":
+                output = output["out"]
+
+            if model._get_name() == "MobileViTV2ForSemanticSegmentation" or\
+               model._get_name() == "SegformerForSemanticSegmentation":
+                output = output[0]
+                output = torch.nn.functional.interpolate(output, size=(target.shape[2], target.shape[3]), mode='bilinear', align_corners=False)
+
             val_loss += loss_fn(output, target).item()
 
             # threshold output and target
@@ -159,7 +175,7 @@ def trainer(
     for epoch in range(1, epochs + 1):
         print(f"Epoch {epoch}:")
         train_loss, train_dice = train_step(model, train_loader, loss_fn, optimizer,  device)
-        print(f"Train Loss: {train_loss:.4f}")
+        print(f"Train Loss: {train_loss:.4f}, Train Dice: {train_dice:.4f}")
         
         print(f"Learning rate: {optimizer.param_groups[0]['lr']:.5f}")
         results["learning_rate"].append(optimizer.param_groups[0]["lr"])
@@ -169,7 +185,7 @@ def trainer(
         results["train_dice"].append(train_dice)
 
         val_loss, val_dice = val_step(model, val_loader, loss_fn, device)
-        print(f"val Loss: {val_loss:.4f}")
+        print(f"Val Loss: {val_loss:.4f}, Val Dice: {val_dice:.4f}")
         print()
         
         results["val_loss"].append(val_loss)
