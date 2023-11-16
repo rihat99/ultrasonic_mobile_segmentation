@@ -163,3 +163,5 @@ datasets/CT2US
 .vscode
 runs/
 model.ptl
+model_7.ptl
+datasets/archive.zip

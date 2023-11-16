@@ -13,60 +13,8 @@ import cv2
 import numpy as np
 
 
-class BUSI(Dataset):
-    def __init__(self, root, image_transform, mask_transform, target_transform=None):
-        super().__init__()
-
-        self.root = root
-
-        self.images = []
-        self.masks = []
-        self.labels = []
-
-        self.make_dataset()
-
-        self.image_transform = image_transform
-        self.mask_transform = mask_transform
-        self.target_transform = target_transform
-
-
-    def make_dataset(self):
-        for target in sorted(os.listdir(self.root)):
-            d = os.path.join(self.root, target)
-            if not os.path.isdir(d):
-                continue
-
-            for root, _, fnames in sorted(os.walk(d)):
-                for fname in sorted(fnames):
-                    path = os.path.join(root, fname)
-
-                    if not path.endswith('mask.png'):
-                        mask_path = path.replace('.png', '_mask.png')
-                        if os.path.isfile(mask_path):
-                            self.images.append(path)
-                            self.masks.append(mask_path)
-                            self.labels.append(target)
-
-
-    
-    def __getitem__(self, index):
-        image = cv2.imread(self.images[index], cv2.IMREAD_GRAYSCALE)
-        mask = cv2.imread(self.masks[index], cv2.IMREAD_GRAYSCALE)
-
-        image = self.image_transform(image)
-        mask = self.mask_transform(mask)
-        target = self.labels[index]
-        if self.target_transform is not None:
-            target = self.target_transform(self.labels[index])
-
-        return image, mask, target
-
-
-    def __len__(self):
-        return len(self.images)
         
-
-class CT2US(Dataset):
+class UltrasonicDataset(Dataset):
     def __init__(self, root, transforms):
         super().__init__()
 
@@ -96,6 +44,9 @@ class CT2US(Dataset):
     def __getitem__(self, index):
         image = cv2.imread(self.images[index], cv2.IMREAD_GRAYSCALE).astype('float32') / 255
         mask = cv2.imread(self.masks[index], cv2.IMREAD_GRAYSCALE).astype('float32') / 255
+
+        # print(self.images[index], self.masks[index])
+
 
         # unsqueeze to add a channel dimension
         image = np.expand_dims(image, axis=2)

@@ -34,7 +34,7 @@ def train_step(
 
     post_label = Compose([AsDiscrete(to_onehot=2)])
     post_pred = Compose([AsDiscrete(argmax=True, to_onehot=2)])
-    dice_acc = DiceMetric(include_background=False, get_not_nans=True)
+    dice_acc = DiceMetric(include_background=True, get_not_nans=True)
 
     for batch_idx, (data, target) in enumerate(tqdm(train_loader)):
         data, target = data.to(device), target.to(device)
@@ -49,7 +49,12 @@ def train_step(
             output = output[0]
             output = torch.nn.functional.interpolate(output, size=(target.shape[2], target.shape[3]), mode='bilinear', align_corners=False)
 
-        loss = loss_fn(output, target)
+        if loss_fn._get_name() == "BCEWithLogitsLoss":
+
+            loss = loss_fn(output[:, 1, :, :].unsqueeze(1), target)
+        else:
+            loss = loss_fn(output, target)
+
         loss.backward()
         optimizer.step()
 
@@ -99,7 +104,7 @@ def val_step(
     
     post_label = Compose([AsDiscrete(to_onehot=2)])
     post_pred = Compose([AsDiscrete(argmax=True, to_onehot=2)])
-    dice_acc = DiceMetric(include_background=False, get_not_nans=True)
+    dice_acc = DiceMetric(include_background=True, get_not_nans=True)
 
     with torch.no_grad():
         for data, target in tqdm(val_loader):
@@ -114,7 +119,13 @@ def val_step(
                 output = output[0]
                 output = torch.nn.functional.interpolate(output, size=(target.shape[2], target.shape[3]), mode='bilinear', align_corners=False)
 
-            val_loss += loss_fn(output, target).item()
+
+            if loss_fn._get_name() == "BCEWithLogitsLoss":
+                loss = loss_fn(output[:, 1, :, :].unsqueeze(1), target)
+            else:
+                loss = loss_fn(output, target)
+
+            val_loss += loss.item()
 
             # threshold output and target
             val_labels_list = decollate_batch(target)

@@ -4,7 +4,7 @@ import torch
 def get_model(MODEL, IMAGE_SIZE):
     if MODEL == "UNet":
         from unet import UNet
-        model = UNet(outSize=(IMAGE_SIZE, IMAGE_SIZE))
+        model = UNet(outSize=(IMAGE_SIZE, IMAGE_SIZE), )
 
     elif MODEL == "SegResNet":
         from monai.networks.nets import SegResNet
@@ -18,7 +18,7 @@ def get_model(MODEL, IMAGE_SIZE):
 
         model
     elif MODEL == "ResUNEt":
-        from res_unet import unet
+        from models.res_unet import unet
 
         model = unet(in_channels=1, out_channels=2)
 

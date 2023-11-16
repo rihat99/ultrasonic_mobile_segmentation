@@ -1,4 +1,4 @@
-from dataset import CT2US
+from dataset import UltrasonicDataset
 from engine import trainer
 from utils import plot_results
 from models.get_model import get_model
@@ -28,6 +28,7 @@ BATCH_SIZE = int(config["BATCH_SIZE"])
 NUM_EPOCHS = int(config["NUM_EPOCHS"])
 
 LOSS = config["LOSS"]
+DATASET = config["DATASET"]
 
 IMAGE_SIZE = int(config["IMAGE_SIZE"])
 THRESHOLD = float(config["THRESHOLD"])
@@ -64,22 +65,28 @@ def main():
         v2.ToDtype(torch.float32),
         v2.RandomHorizontalFlip(p=0.5),
         v2.RandomVerticalFlip(p=0.5),
-        v2.RandomRotation(degrees=(0, 15)),
-        v2.RandomAffine(degrees=(0, 15), translate=(0.1, 0.1), scale=(0.9, 1.1), shear=(-10, 10, -10, 10)),
-        v2.RandomResizedCrop(IMAGE_SIZE, scale=(0.8, 1.0), antialias=True),
+        v2.RandomRotation(degrees=(-30, 30)),
+        v2.RandomAffine(degrees=(-10, 10), translate=(0.1, 0.1), scale=(0.8, 1.2), shear=(-10, 10, -10, 10)),
+        v2.RandomResizedCrop((IMAGE_SIZE, IMAGE_SIZE), scale=(0.8, 1.0), antialias=True),
     ])
 
     transforms_test = v2.Compose([
         v2.ToImage(),
         v2.ToDtype(torch.float32),
-        v2.Resize(IMAGE_SIZE, antialias=True),
+        v2.Resize((IMAGE_SIZE, IMAGE_SIZE), antialias=True),
     ])
 
-    train_dataset = CT2US(root="datasets/CT2US/train", transforms=transforms_train)
-    test_dataset = CT2US(root="datasets/CT2US/test", transforms=transforms_test)
+    if DATASET == "CT2US":
+        train_dataset = UltrasonicDataset(root="datasets/CT2US/train", transforms=transforms_train)
+        test_dataset = UltrasonicDataset(root="datasets/CT2US/test", transforms=transforms_test)
+    elif DATASET == "BUSI":
+        train_dataset = UltrasonicDataset(root="datasets/BUSI/train", transforms=transforms_train)
+        test_dataset = UltrasonicDataset(root="datasets/BUSI/test", transforms=transforms_test)
+    else:
+        raise Exception("Dataset not implemented")
 
     train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=8)
-    test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=8)
+    test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=0)
 
     #load model
     model = get_model(MODEL, IMAGE_SIZE)
@@ -87,7 +94,7 @@ def main():
     
     #load optimizer
     if LOSS == "DiceCELoss":
-        loss = DiceCELoss(to_onehot_y=True, softmax=True, include_background=False)
+        loss = DiceCELoss(to_onehot_y=True, softmax=True, include_background=True)
     elif LOSS == "BCEWithLogitsLoss":
         loss = torch.nn.BCEWithLogitsLoss()
     else:
