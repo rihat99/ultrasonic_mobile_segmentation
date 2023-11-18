@@ -1,6 +1,6 @@
 from dataset import UltrasonicDataset
 from engine import trainer
-from utils import plot_results
+from utils import plot_results, load_model
 from models.get_model import get_model
 
 import torch
@@ -33,6 +33,8 @@ DATASET = config["DATASET"]
 IMAGE_SIZE = int(config["IMAGE_SIZE"])
 THRESHOLD = float(config["THRESHOLD"])
 MODEL = config["MODEL"]
+PRETRAINED = config["PRETRAINED"]
+PRETRAINED_RUN = config["PRETRAINED_RUN"]
 
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(f"Using {DEVICE} device")
@@ -76,20 +78,21 @@ def main():
         v2.Resize((IMAGE_SIZE, IMAGE_SIZE), antialias=True),
     ])
 
-    if DATASET == "CT2US":
-        train_dataset = UltrasonicDataset(root="datasets/CT2US/train", transforms=transforms_train)
-        test_dataset = UltrasonicDataset(root="datasets/CT2US/test", transforms=transforms_test)
-    elif DATASET == "BUSI":
-        train_dataset = UltrasonicDataset(root="datasets/BUSI/train", transforms=transforms_train)
-        test_dataset = UltrasonicDataset(root="datasets/BUSI/test", transforms=transforms_test)
-    else:
-        raise Exception("Dataset not implemented")
+    train_path = "datasets/" + DATASET + "/train"
+    test_path = "datasets/" + DATASET + "/test"
+    train_dataset = UltrasonicDataset(root=train_path, transforms=transforms_train)
+    test_dataset = UltrasonicDataset(root=test_path, transforms=transforms_test)
 
     train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=8)
     test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=0)
 
     #load model
     model = get_model(MODEL, IMAGE_SIZE)
+
+    if PRETRAINED:
+        weights_path = "./runs/" + PRETRAINED_RUN + "/best_model.pth"
+        model = load_model(model, weights_path)
+
     model.to(DEVICE)
     
     #load optimizer

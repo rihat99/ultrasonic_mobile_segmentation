@@ -14,4 +14,8 @@ This project endeavors to innovate within the field of medical imaging by focusi
 
 2. [CT2US for Kidney Segmwntation](https://www.kaggle.com/datasets/siatsyx/ct2usforkidneyseg)
 
+### Prepare Datasets
 
+Download datasets from Kaggle, unzip and put them to datasets folder. Rename the unzipped folders as "BUSI" and "CT2US" respectively. 
+
+Use `split_BUSI.ipynb` and `split_CT2US.ipynb` to divide the dataset to train and test 

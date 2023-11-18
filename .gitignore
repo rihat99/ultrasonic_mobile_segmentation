@@ -165,3 +165,5 @@ runs/
 model.ptl
 model_7.ptl
 datasets/archive.zip
+datasets/OpenKidney
+datasets/test_kidney_video.mp4
